@@ -1,5 +1,5 @@
 import express from "express";
-import { chromium } from "playwright";
+import puppeteer from "puppeteer";
 
 const app = express();
 
@@ -14,11 +14,17 @@ app.get("/", (req, res) => {
 
 app.get("/stream", async (req, res) => {
 
-  let browser = null;
+  let browser;
 
   try {
 
-    browser = await chromium.launch();
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox"
+      ]
+    });
 
     const page = await browser.newPage();
 
@@ -28,22 +34,20 @@ app.get("/stream", async (req, res) => {
 
     await browser.close();
 
-    return res.json({
+    res.json({
       status: "success",
       title: title
     });
 
-  } catch (error) {
-
-    console.log(error);
+  } catch (err) {
 
     if (browser) {
       await browser.close();
     }
 
-    return res.status(500).json({
+    res.status(500).json({
       status: "error",
-      message: error.message
+      message: err.message
     });
 
   }
