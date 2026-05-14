@@ -15,6 +15,7 @@ app.get("/stream", async (req, res) => {
   let browser;
 
   try {
+
     browser = await chromium.launch({
       headless: true
     });
@@ -29,10 +30,12 @@ app.get("/stream", async (req, res) => {
 
     res.json({
       status: "success",
-      title
+      title: title
     });
 
   } catch (err) {
+
+    console.error(err);
 
     if (browser) {
       await browser.close();
