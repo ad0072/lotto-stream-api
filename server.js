@@ -3,94 +3,68 @@ import { chromium } from "playwright";
 
 const app = express();
 
-const PORT = process.env.PORT || 3000;
-
 app.get("/", async (req, res) => {
-
   let browser;
 
   try {
-
     browser = await chromium.launch({
       headless: true,
+      executablePath: "/opt/render/.cache/ms-playwright/chromium-1223/chrome-linux/chrome",
       args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
 
     const page = await browser.newPage();
 
+    let foundApi = null;
+
+    page.on("response", async (response) => {
+      const url = response.url();
+
+      if (
+        url.includes("/api/stream/") ||
+        url.includes(".m3u8") ||
+        url.includes("live")
+      ) {
+        foundApi = url;
+      }
+    });
+
     await page.goto("https://exphuay.com", {
-      waitUntil: "domcontentloaded",
+      waitUntil: "networkidle",
       timeout: 120000
     });
 
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(15000);
 
-    let streamUrl = null;
+    await browser.close();
 
-    page.on("request", request => {
-
-      const url = request.url();
-
-      if (url.includes("/api/stream/home")) {
-        streamUrl = url;
-      }
-
-    });
-
-    await page.goto(
-      "https://exphuay.com/result/laosdevelops",
-      {
-        waitUntil: "domcontentloaded",
-        timeout: 120000
-      }
-    );
-
-    await page.waitForTimeout(10000);
-
-    if (!streamUrl) {
-
+    if (foundApi) {
       return res.json({
-        status: "error",
-        message: "ไม่พบ stream API"
+        status: "success",
+        api: foundApi
       });
-
     }
 
-    const raw = await page.evaluate(async (url) => {
-
-      const response = await fetch(url, {
-        headers: {
-          accept: "text/event-stream"
-        }
-      });
-
-      return await response.text();
-
-    }, streamUrl);
-
     return res.json({
-      status: "success",
-      streamUrl,
-      raw
-    });
-
-  } catch (error) {
-
-    return res.status(500).json({
       status: "error",
-      message: error.message
+      message: "ไม่พบ stream API"
     });
 
-  } finally {
+  } catch (err) {
 
     if (browser) {
       await browser.close();
     }
 
+    return res.json({
+      status: "error",
+      message: err.message
+    });
   }
-
 });
 
+const PORT = process.env.PORT || 10000;
+
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log("Server running on port", PORT);
 });
