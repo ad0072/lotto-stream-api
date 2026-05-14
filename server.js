@@ -1,1 +1,96 @@
-import express from "express"; import { chromium } from "playwright"; const app = express(); const PORT = process.env.PORT || 3000; app.get("/", async (req, res) => { let browser; try { browser = await chromium.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] }); const page = await browser.newPage(); // เปิดเว็บหลัก await page.goto("https://exphuay.com", { waitUntil: "domcontentloaded", timeout: 120000 }); // รอโหลด await page.waitForTimeout(5000); let streamUrl = null; // ดัก request page.on("request", request => { const url = request.url(); if (url.includes("/api/stream/home")) { streamUrl = url; } }); // เปิดหน้าผลหวย await page.goto( "https://exphuay.com/result/laosdevelops", { waitUntil: "domcontentloaded", timeout: 120000 } ); // รอ stream ยิง await page.waitForTimeout(10000); // ถ้าไม่เจอ API if (!streamUrl) { return res.json({ status: "error", message: "ไม่พบ stream API" }); } // เรียก API ผ่าน browser session เดิม const raw = await page.evaluate(async (url) => { const response = await fetch(url, { headers: { "accept": "text/event-stream" } }); return await response.text(); }, streamUrl); return res.json({ status: "success", streamUrl, raw }); } catch (error) { return res.status(500).json({ status: "error", message: error.message }); } finally { if (browser) { await browser.close(); } } }); app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); });
+import express from "express";
+import { chromium } from "playwright";
+
+const app = express();
+
+const PORT = process.env.PORT || 3000;
+
+app.get("/", async (req, res) => {
+
+  let browser;
+
+  try {
+
+    browser = await chromium.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    });
+
+    const page = await browser.newPage();
+
+    await page.goto("https://exphuay.com", {
+      waitUntil: "domcontentloaded",
+      timeout: 120000
+    });
+
+    await page.waitForTimeout(5000);
+
+    let streamUrl = null;
+
+    page.on("request", request => {
+
+      const url = request.url();
+
+      if (url.includes("/api/stream/home")) {
+        streamUrl = url;
+      }
+
+    });
+
+    await page.goto(
+      "https://exphuay.com/result/laosdevelops",
+      {
+        waitUntil: "domcontentloaded",
+        timeout: 120000
+      }
+    );
+
+    await page.waitForTimeout(10000);
+
+    if (!streamUrl) {
+
+      return res.json({
+        status: "error",
+        message: "ไม่พบ stream API"
+      });
+
+    }
+
+    const raw = await page.evaluate(async (url) => {
+
+      const response = await fetch(url, {
+        headers: {
+          accept: "text/event-stream"
+        }
+      });
+
+      return await response.text();
+
+    }, streamUrl);
+
+    return res.json({
+      status: "success",
+      streamUrl,
+      raw
+    });
+
+  } catch (error) {
+
+    return res.status(500).json({
+      status: "error",
+      message: error.message
+    });
+
+  } finally {
+
+    if (browser) {
+      await browser.close();
+    }
+
+  }
+
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
