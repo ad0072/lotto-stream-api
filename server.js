@@ -3,9 +3,7 @@ import puppeteer from "puppeteer";
 
 const app = express();
 
-const PORT = process.env.PORT || 10000;
-
-app.get("/", (req, res) => {
+app.get("/", async (req, res) => {
   res.json({
     status: "success",
     message: "server working"
@@ -13,16 +11,23 @@ app.get("/", (req, res) => {
 });
 
 app.get("/stream", async (req, res) => {
-
   let browser;
 
   try {
-
-browser = await puppeteer.launch({ headless: true, executablePath: "/opt/render/.cache/puppeteer/chrome/linux-148.0.7778.97/chrome-linux64/chrome", args: [ "--no-sandbox", "--disable-setuid-sandbox" ] });
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox"
+      ]
+    });
 
     const page = await browser.newPage();
 
-    await page.goto("https://example.com");
+    await page.goto("https://example.com", {
+      waitUntil: "networkidle2",
+      timeout: 60000
+    });
 
     const title = await page.title();
 
@@ -33,20 +38,20 @@ browser = await puppeteer.launch({ headless: true, executablePath: "/opt/render/
       title: title
     });
 
-  } catch (err) {
+  } catch (error) {
 
     if (browser) {
       await browser.close();
     }
 
-    res.status(500).json({
+    res.json({
       status: "error",
-      message: err.message
+      message: error.message
     });
-
   }
-
 });
+
+const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
