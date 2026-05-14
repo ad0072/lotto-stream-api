@@ -4,6 +4,7 @@ import { chromium } from "playwright";
 const app = express();
 
 app.get("/", async (req, res) => {
+
   let browser;
 
   try {
@@ -21,6 +22,7 @@ app.get("/", async (req, res) => {
     let urls = [];
 
     page.on("response", async (response) => {
+
       const url = response.url();
 
       if (
@@ -30,6 +32,7 @@ app.get("/", async (req, res) => {
       ) {
         urls.push(url);
       }
+
     });
 
     await page.goto("https://exphuay.com", {
@@ -37,7 +40,7 @@ app.get("/", async (req, res) => {
       timeout: 120000
     });
 
-    await page.waitForTimeout(15000);
+    await page.waitForTimeout(10000);
 
     await browser.close();
 
@@ -55,14 +58,15 @@ app.get("/", async (req, res) => {
 
     return res.json({
       status: "error",
-      message: err.message,
-      stack: err.stack
+      message: err.message
     });
+
   }
+
 });
 
 const PORT = process.env.PORT || 10000;
 
-app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
 });
