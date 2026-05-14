@@ -2,52 +2,34 @@ import express from "express";
 import { chromium } from "playwright";
 
 const app = express();
+const PORT = process.env.PORT || 10000;
 
-app.get("/", async (req, res) => {
+app.get("/", (req, res) => {
+  res.json({
+    status: "success",
+    message: "server working"
+  });
+});
 
+app.get("/stream", async (req, res) => {
   let browser;
 
   try {
-
     browser = await chromium.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox"
-      ]
+      headless: true
     });
 
     const page = await browser.newPage();
 
-    const urls = [];
+    await page.goto("https://example.com");
 
-    page.on("response", async (response) => {
-
-      const url = response.url();
-
-      if (
-        url.includes(".m3u8") ||
-        url.includes("stream") ||
-        url.includes("playlist")
-      ) {
-        urls.push(url);
-      }
-
-    });
-
-    await page.goto("https://exphuay.com", {
-      waitUntil: "domcontentloaded",
-      timeout: 60000
-    });
-
-    await page.waitForTimeout(10000);
+    const title = await page.title();
 
     await browser.close();
 
-    return res.json({
+    res.json({
       status: "success",
-      total: urls.length,
-      urls
+      title
     });
 
   } catch (err) {
@@ -56,17 +38,13 @@ app.get("/", async (req, res) => {
       await browser.close();
     }
 
-    return res.json({
+    res.status(500).json({
       status: "error",
       message: err.message
     });
-
   }
-
 });
 
-const PORT = process.env.PORT || 10000;
-
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
