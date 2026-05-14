@@ -7,30 +7,33 @@ app.get("/", async (req, res) => {
   let browser;
 
   try {
+
     browser = await chromium.launch({
       headless: true,
-      executablePath: "/opt/render/.cache/ms-playwright/chromium-1223/chrome-linux/chrome",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox"
+      ]
     });
 
     const page = await browser.newPage();
 
-    let foundApi = null;
+    let urls = [];
 
     page.on("response", async (response) => {
       const url = response.url();
 
       if (
-        url.includes("/api/stream/") ||
         url.includes(".m3u8") ||
-        url.includes("live")
+        url.includes("/api/stream/") ||
+        url.includes("playlist")
       ) {
-        foundApi = url;
+        urls.push(url);
       }
     });
 
     await page.goto("https://exphuay.com", {
-      waitUntil: "networkidle",
+      waitUntil: "domcontentloaded",
       timeout: 120000
     });
 
@@ -38,16 +41,10 @@ app.get("/", async (req, res) => {
 
     await browser.close();
 
-    if (foundApi) {
-      return res.json({
-        status: "success",
-        api: foundApi
-      });
-    }
-
     return res.json({
-      status: "error",
-      message: "ไม่พบ stream API"
+      status: "success",
+      total: urls.length,
+      urls
     });
 
   } catch (err) {
@@ -58,7 +55,8 @@ app.get("/", async (req, res) => {
 
     return res.json({
       status: "error",
-      message: err.message
+      message: err.message,
+      stack: err.stack
     });
   }
 });
